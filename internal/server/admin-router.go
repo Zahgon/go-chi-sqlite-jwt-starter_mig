@@ -6,19 +6,16 @@ import (
 	"go-chi-sqlite-jwt-starter/internal/utils"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/labstack/echo/v4"
 )
 
-func adminRouter() http.Handler {
-	r := chi.NewRouter()
-	auth.UseAuthMiddleware(r)
-	r.Use(adminOnly)
+func adminRouter(g *echo.Group) {
+	auth.UseAuthMiddleware(g)
+	g.Use(echo.WrapMiddleware(adminOnly))
 
-	r.Get("/test-token", func(w http.ResponseWriter, r *http.Request) {
+	g.GET("/test-token", echo.WrapHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("You are successfully authenticated as an admin!"))
-	})
-
-	return r
+	})))
 }
 
 func adminOnly(next http.Handler) http.Handler {

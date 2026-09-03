@@ -10,29 +10,26 @@ import (
 	provider "go-chi-sqlite-jwt-starter/internal/provider"
 	"go-chi-sqlite-jwt-starter/internal/utils"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/labstack/echo/v4"
 )
 
-func categoryGroupRouter() http.Handler {
-	r := chi.NewRouter()
-	auth.UseAuthMiddleware(r)
+func categoryGroupRouter(g *echo.Group) {
+	auth.UseAuthMiddleware(g)
 
-	r.Get("/list", category_group_handlers.ListCategoryGroups)
-	r.Post("/create", category_group_handlers.CreateCategoryGroup)
+	g.GET("/list", echo.WrapHandler(http.HandlerFunc(category_group_handlers.ListCategoryGroups)))
+	g.POST("/create", echo.WrapHandler(http.HandlerFunc(category_group_handlers.CreateCategoryGroup)))
 
-	r.Route("/{categoryGroupID}", func(r chi.Router) {
-		r.Use(CategoryGroupCtx)
-		r.Get("/", category_group_handlers.GetCategoryGroup)
-		r.Post("/rename", category_group_handlers.RenameCategoryGroup)
-		r.Delete("/", category_group_handlers.DeleteCategoryGroup)
-	})
-
-	return r
+	sub := g.Group("/:categoryGroupID")
+	sub.Use(injectURLParam("categoryGroupID"))
+	sub.Use(echo.WrapMiddleware(CategoryGroupCtx))
+	sub.GET("", echo.WrapHandler(http.HandlerFunc(category_group_handlers.GetCategoryGroup)))
+	sub.POST("/rename", echo.WrapHandler(http.HandlerFunc(category_group_handlers.RenameCategoryGroup)))
+	sub.DELETE("", echo.WrapHandler(http.HandlerFunc(category_group_handlers.DeleteCategoryGroup)))
 }
 
 func CategoryGroupCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		categoryGroupID := chi.URLParam(r, "categoryGroupID")
+		categoryGroupID := urlParam(r, "categoryGroupID")
 		id, err := utils.StringToInt64(categoryGroupID)
 		if err != nil {
 			http.Error(w, "Invalid category group ID", http.StatusBadRequest)

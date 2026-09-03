@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/labstack/echo/v4"
 )
 
 var tokenAuth *jwtauth.JWTAuth
@@ -19,18 +19,18 @@ func InitializeTokenVerifier() {
 	tokenAuth = jwtauth.New("HS256", []byte(secret), nil)
 }
 
-func UseAuthMiddleware(r *chi.Mux) {
+func UseAuthMiddleware(g *echo.Group) {
 	// Seek, verify and validate JWT tokens
-	r.Use(jwtauth.Verifier(tokenAuth))
+	g.Use(echo.WrapMiddleware(jwtauth.Verifier(tokenAuth)))
 
 	// Handle valid / invalid tokens. In this example, we use
 	// the provided authenticator middleware, but you can write your
 	// own very easily, look at the Authenticator method in jwtauth.go
 	// and tweak it, its not scary.
-	r.Use(jwtauth.Authenticator(tokenAuth))
+	g.Use(echo.WrapMiddleware(jwtauth.Authenticator(tokenAuth)))
 
 	// Check if the user exists in the database & add it to the context
-	r.Use(myAuthMiddleware)
+	g.Use(echo.WrapMiddleware(myAuthMiddleware))
 }
 
 func myAuthMiddleware(next http.Handler) http.Handler {

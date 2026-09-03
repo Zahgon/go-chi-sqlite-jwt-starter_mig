@@ -3,31 +3,34 @@ package server
 import (
 	"go-chi-sqlite-jwt-starter/internal/auth"
 	"log"
+	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
-func Initialize() *chi.Mux {
+func Initialize() *echo.Echo {
 	log.Println("Initializing server...")
 	defer log.Println("Server initialized")
 
-	r := chi.NewRouter()
-	useGlobalMiddleware(r)
+	e := echo.New()
+	e.IPExtractor = echo.ExtractIPFromXFFHeader()
+	useGlobalMiddleware(e)
 	auth.InitializeTokenVerifier()
 
-	r.Mount("/category", categoryRouter())
-	r.Mount("/category-group", categoryGroupRouter())
-	r.Mount("/admin", adminRouter())
-	r.Mount("/auth", authRouter())
+	categoryRouter(e.Group("/category"))
+	categoryGroupRouter(e.Group("/category-group"))
+	adminRouter(e.Group("/admin"))
+	authRouter(e.Group("/auth"))
 
-	return r
+	return e
 }
 
-func useGlobalMiddleware(r *chi.Mux) {
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Heartbeat("/health"))
+func useGlobalMiddleware(e *echo.Echo) {
+	e.Use(middleware.RequestID())
+	e.Use(middleware.Recover())
+	e.Use(middleware.Logger())
+	e.GET("/health", func(c echo.Context) error {
+		return c.String(http.StatusOK, ".")
+	})
 }

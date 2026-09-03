@@ -5,14 +5,10 @@ import (
 
 	auth_handlers "go-chi-sqlite-jwt-starter/internal/auth/handlers"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/labstack/echo/v4"
 )
 
-func authRouter() http.Handler {
-	r := chi.NewRouter()
-
-	r.Post("/register", auth_handlers.RegisterAccount)
-	r.Post("/login", auth_handlers.Login)
-
-	return r
+func authRouter(g *echo.Group) {
+	g.POST("/register", echo.WrapHandler(http.HandlerFunc(auth_handlers.RegisterAccount)))
+	g.POST("/login", echo.WrapHandler(http.HandlerFunc(auth_handlers.Login)))
 }

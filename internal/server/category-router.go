@@ -11,29 +11,26 @@ import (
 	"go-chi-sqlite-jwt-starter/internal/utils"
 	"go-chi-sqlite-jwt-starter/internal/validation"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/labstack/echo/v4"
 )
 
-func categoryRouter() http.Handler {
-	r := chi.NewRouter()
-	auth.UseAuthMiddleware(r)
+func categoryRouter(g *echo.Group) {
+	auth.UseAuthMiddleware(g)
 
-	r.Get("/list", category_handlers.ListCategories)
-	r.Post("/create", category_handlers.CreateCategory)
+	g.GET("/list", echo.WrapHandler(http.HandlerFunc(category_handlers.ListCategories)))
+	g.POST("/create", echo.WrapHandler(http.HandlerFunc(category_handlers.CreateCategory)))
 
-	r.Route("/{categoryID}", func(r chi.Router) {
-		r.Use(CategoryCtx)
-		r.Get("/", category_handlers.GetCategory)
-		r.Put("/", category_handlers.UpdateCategory)
-		r.Delete("/", category_handlers.DeleteCategory)
-	})
-
-	return r
+	sub := g.Group("/:categoryID")
+	sub.Use(injectURLParam("categoryID"))
+	sub.Use(echo.WrapMiddleware(CategoryCtx))
+	sub.GET("", echo.WrapHandler(http.HandlerFunc(category_handlers.GetCategory)))
+	sub.PUT("", echo.WrapHandler(http.HandlerFunc(category_handlers.UpdateCategory)))
+	sub.DELETE("", echo.WrapHandler(http.HandlerFunc(category_handlers.DeleteCategory)))
 }
 
 func CategoryCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		categoryID := chi.URLParam(r, "categoryID")
+		categoryID := urlParam(r, "categoryID")
 		id, err := utils.StringToInt64(categoryID)
 		if err != nil {
 			http.Error(w, "Invalid category ID", http.StatusBadRequest)
